@@ -1,31 +1,41 @@
 use anyhow::Result;
 use glob::glob;
-use serde_yaml::to_string;
 use std::collections::BTreeMap;
-use std::fs;
 use std::io::{self};
 use std::path::PathBuf;
 
-use crate::config::{does_config_exist, Config, Profile, CONFIG_FILE_NAME};
-use crate::log::{message, success, warn};
+use crate::config::{does_config_exist, is_target_shell, load_config, save_config, Config, Profile, TARGET_SHELL};
+use crate::log::{message, success, warn, wrap_yellow};
 
 pub fn run_init() -> Result<()> {
+    let mut target = String::from(TARGET_SHELL);
+    let mut ignore = vec![".env.example".to_string()];
+
     if does_config_exist() {
         if !prompt_reinit()? {
             warn("Initialization cancelled.");
             return Ok(());
         }
+
+        let config = load_config()?;
+        if !is_target_shell(&config) {
+            target = config.target.clone();
+            ignore.push(target.clone().to_string());
+        }
     }
 
-    let env_files = discover_env_files()?;
-    init_config(env_files)?;
+    let env_files = discover_env_files(ignore)?;
+    init_config(&target, env_files)?;
     Ok(())
 }
 
 fn prompt_reinit() -> Result<bool> {
+    let prompt = "Do you want to reinitialize? [Y/n]";
+    let formatted: String = wrap_yellow(prompt);
+
     message(vec![
         "An existing nv configuration file was found in the current directory.",
-        "Do you want to reinitialize? [Y/n]",
+        &formatted,
     ]);
 
     let mut input = String::new();
@@ -35,10 +45,18 @@ fn prompt_reinit() -> Result<bool> {
     Ok(input != "n" && input != "no")
 }
 
-fn discover_env_files() -> Result<Vec<PathBuf>> {
-    // TODO: Ignore .env.example?
+fn discover_env_files(ignore: Vec<String>) -> Result<Vec<PathBuf>> {
     Ok(glob(".env*")?
-        .filter_map(Result::ok)
+        .filter_map(|result| {
+            result.ok().and_then(|path| {
+                let path_str = path.to_string_lossy();
+                if ignore.iter().any(|ignored| path_str.contains(ignored)) {
+                    None
+                } else {
+                    Some(path)
+                }
+            })
+        })
         .collect())
 }
 
@@ -57,7 +75,7 @@ fn get_profile_name(file_name: &str) -> Option<String> {
     }
 }
 
-fn init_config(env_files: Vec<PathBuf>) -> Result<()> {
+fn init_config(target: &str, env_files: Vec<PathBuf>) -> Result<()> {
     let mut profiles = BTreeMap::new();
 
     profiles.insert(
@@ -81,16 +99,21 @@ fn init_config(env_files: Vec<PathBuf>) -> Result<()> {
         }
     }
 
-    let config = Config { profiles };
-    let yaml = to_string(&config)?;
-    fs::write(CONFIG_FILE_NAME, yaml)?;
-
-    success("Initialized nv.yaml in the current directory.");
-    Ok(())
+    let config = Config { target: target.to_string(), profiles };
+    let res = save_config(&config);
+    match res {
+        Ok(()) => {
+            success("Initialized nvy.yaml in the current directory.");
+            Ok(())
+        },
+        Err(e) => Err(anyhow::anyhow!(e)),
+    }    
 }
 
 #[cfg(test)]
 mod tests {
+    use std::fs;
+
     use super::*;
 
     #[test]
@@ -107,13 +130,13 @@ mod tests {
     #[test]
     fn test_init_config_empty_dir() -> Result<()> {
         let empty_files = Vec::new();
-        init_config(empty_files)?;
+        init_config(TARGET_SHELL,empty_files)?;
 
-        let content = fs::read_to_string("nv.yaml")?;
+        let content = fs::read_to_string("nvy.yaml")?;
         assert!(content.contains("default:"));
         assert!(content.contains("path: .env"));
         
-        fs::remove_file("nv.yaml")?;
+        fs::remove_file("nvy.yaml")?;
         Ok(())
     }
 }

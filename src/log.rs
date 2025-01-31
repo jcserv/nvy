@@ -1,6 +1,10 @@
 use inline_colorization::*;
 use std::io::{self, Write};
 
+pub fn wrap_yellow(message: &str) -> String {
+    format!("{color_yellow}{message}{color_reset}")
+}
+
 pub fn success(message: &str) {
     println!("{color_green}Success{color_reset}\t{message}");
 }

@@ -21,6 +21,6 @@ Cargo.lock
 #.idea/
 
 **/.DS_Store
-nv.yaml
-nv.yml
+nvy.yaml
+nvy.yml
 .env*

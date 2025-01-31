@@ -1,7 +1,7 @@
 use anyhow::{anyhow, Result};
-use std::{collections::HashSet, fs};
+use std::{collections::{HashMap, HashSet}, fs};
 
-use crate::config::{Config, does_config_exist, get_profile_path, load_config, CONFIG_FILE_NAME};
+use crate::config::{does_config_exist, get_profile_path, is_target_shell, load_config, Config, CONFIG_FILE_NAME};
 
 const PROFILE_ENV_VAR: &str = "NV_CURRENT_PROFILE";
 
@@ -26,31 +26,66 @@ impl EnvVar {
             None => format!("unset {}", self.key),
         }
     }
+
+    fn to_env_file_line(&self) -> Option<String> {
+        self.value.as_ref().map(|val| format!("{}={}", self.key, val))
+    }
+}
+
+struct ExportResult {
+    unset_vars: HashMap<String, EnvVar>,
+    new_vars: HashMap<String, EnvVar>,
 }
 
 pub fn run_use(profiles: &Vec<String>) -> Result<()> {
     if !does_config_exist() {
         return Err(anyhow!(
-            "{} does not exist in the current directory, please run `nv init` first.",
+            "{} does not exist in the current directory, please run `nvy init` first.",
             CONFIG_FILE_NAME
         ));
     }
 
-    let config = load_config()?;
-    profiles.iter().for_each(|profile| {
-        let res = export_profile(&config, profile);
-        match res {
-            Ok(_) => (),
-            Err(e) => eprintln!("{}", e),
-        }
-    });
+    let mut result = ExportResult {
+        unset_vars: HashMap::new(),
+        new_vars: HashMap::new(),
+    };
 
-    println!("export {}={}", PROFILE_ENV_VAR, escape_shell_value(&profiles.join(",")));
+    let config = load_config()?;
+
+    for profile in profiles {
+        let profile_vars = export_profile(&config, profile)?;
+        result.unset_vars.extend(profile_vars.unset_vars);
+        result.new_vars.extend(profile_vars.new_vars);
+    }
+
+    if is_target_shell(&config) {
+        for (_, var) in result.unset_vars {
+            println!("{}", var.to_shell_command());
+        }
+        for (_, var) in result.new_vars {
+            println!("{}", var.to_shell_command());
+        }
+        println!(
+            "export {}={}",
+            PROFILE_ENV_VAR,
+            escape_shell_value(&profiles.join(","))
+        );
+    } else {
+        let mut content = String::new();
+        for (_, var) in result.new_vars {
+            if let Some(line) = var.to_env_file_line() {
+                content.push_str(&line);
+                content.push('\n');
+            }
+        }
+
+        fs::write(config.target, content)?;
+    }
 
     Ok(())
 }
 
-fn export_profile(config: &Config, profile: &String) -> Result<()> {
+fn export_profile(config: &Config, profile: &String) -> Result<ExportResult> {
     let new_path = get_profile_path(config, profile)?;
 
     if !does_file_exist(&new_path) {
@@ -63,24 +98,27 @@ fn export_profile(config: &Config, profile: &String) -> Result<()> {
 
     let unset_vars = get_current_profile_vars()?
         .into_iter()
-        .map(|key| EnvVar::new(key, None));
+        .map(|key| (key.clone(), EnvVar::new(key, None)))
+        .collect();
 
     let new_vars = parse_env_file(&new_path)?
         .into_iter()
-        .filter(EnvVar::is_valid);
+        .filter(|var| var.is_valid())
+        .map(|var| (var.key.clone(), var))
+        .collect();
 
-    for var in unset_vars.chain(new_vars) {
-        println!("{}", var.to_shell_command());
-    }
-    Ok(())
-}
-
-fn does_file_exist(path: &str) -> bool {
-    fs::metadata(path).is_ok()
+    Ok(ExportResult {
+        unset_vars,
+        new_vars,
+    })
 }
 
 fn escape_shell_value(value: &str) -> String {
     format!("'{}'", value.replace('\'', "'\\''"))
+}
+
+fn does_file_exist(path: &str) -> bool {
+    fs::metadata(path).is_ok()
 }
 
 fn get_current_profile_vars() -> Result<HashSet<String>> {

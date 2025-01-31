@@ -1,14 +1,45 @@
-use anyhow::anyhow;
+use anyhow::{anyhow, Result};
 use serde::{Deserialize, Serialize};
+use serde_yaml::to_string;
 use std::collections::BTreeMap;
 use std::fs;
 
-pub const CONFIG_FILE_NAME: &str = "nv.yaml";
+pub const TARGET_SHELL: &str = "sh";
+
+pub const CONFIG_FILE_NAME: &str = "nvy.yaml";
 
 #[derive(Serialize, Deserialize)]
 pub struct Config {
+    pub target: String,
+
     #[serde(serialize_with = "ordered_map")]
     pub profiles: BTreeMap<String, Vec<Profile>>,
+}
+
+pub fn is_target_shell(cfg: &Config) -> bool {
+    cfg.target == TARGET_SHELL
+}
+
+pub fn does_file_exist(path: &str) -> bool {
+    fs::metadata(path).is_ok()
+}
+
+pub fn does_config_exist() -> bool {
+    does_file_exist(CONFIG_FILE_NAME)
+}
+
+pub fn load_config() -> Result<Config, anyhow::Error> {
+    let res = fs::read_to_string(CONFIG_FILE_NAME);
+    match res {
+        Ok(content) => Ok(serde_yaml::from_str(&content)?),
+        Err(e) => Err(anyhow::anyhow!(e)),
+    }
+}
+
+pub fn save_config(config: &Config) -> Result<()> {
+    let yaml = to_string(&config)?;
+    fs::write(CONFIG_FILE_NAME, yaml)?;
+    Ok(())
 }
 
 pub fn get_profile_path(config: &Config, profile: &String) -> Result<String, anyhow::Error> {
@@ -34,18 +65,6 @@ pub fn get_profile_path(config: &Config, profile: &String) -> Result<String, any
 #[derive(Serialize, Deserialize)]
 pub struct Profile {
     pub path: String,
-}
-
-pub fn does_config_exist() -> bool {
-    fs::metadata(CONFIG_FILE_NAME).is_ok()
-}
-
-pub fn load_config() -> Result<Config, anyhow::Error> {
-    let res = fs::read_to_string(CONFIG_FILE_NAME);
-    match res {
-        Ok(content) => Ok(serde_yaml::from_str(&content)?),
-        Err(e) => Err(anyhow::anyhow!(e)),
-    }
 }
 
 fn ordered_map<S>(value: &BTreeMap<String, Vec<Profile>>, serializer: S) -> Result<S::Ok, S::Error>

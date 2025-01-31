@@ -1,0 +1,58 @@
+{
+  // Use IntelliSense to learn about possible attributes.
+  // Hover to view descriptions of existing attributes.
+  // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "type": "lldb",
+      "request": "launch",
+      "name": "Run",
+      "cargo": {
+        "args": ["build", "--bin=nvy", "--package=nvy"],
+        "filter": {
+          "name": "nvy",
+          "kind": "bin"
+        }
+      },
+      "args": ["${input:nvyCommand}"],
+      "cwd": "${workspaceFolder}"
+    },
+    {
+      "type": "lldb",
+      "request": "launch",
+      "name": "Run unit tests",
+      "cargo": {
+        "args": ["test", "--no-run", "--bin=nvy", "--package=nvy"],
+        "filter": {
+          "name": "nvy",
+          "kind": "bin"
+        }
+      },
+      "args": [],
+      "cwd": "${workspaceFolder}"
+    },
+    {
+      "type": "lldb",
+      "request": "launch",
+      "name": "Run integration tests",
+      "cargo": {
+        "args": ["test", "--no-run", "--test=integration", "--package=nvy"],
+        "filter": {
+          "name": "integration",
+          "kind": "test"
+        }
+      },
+      "args": [],
+      "cwd": "${workspaceFolder}"
+    }
+  ],
+  "inputs": [
+    {
+      "id": "nvyCommand",
+      "type": "promptString",
+      "description": "nvy command (e.g. 'init', 'use default', 'export .env.local')",
+      "default": "init"
+    }
+  ]
+}

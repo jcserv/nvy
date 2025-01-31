@@ -22,17 +22,17 @@ impl TestEnv {
     }
 
     fn create_config(&self, contents: &str) -> std::io::Result<()> {
-        let mut file = File::create(self.temp_dir.path().join("nv.yaml"))?;
+        let mut file = File::create(self.temp_dir.path().join("nvy.yaml"))?;
         file.write_all(contents.as_bytes())?;
         file.sync_all()
     }
 
     fn assert_config_exists(&self) -> bool {
-        self.temp_dir.path().join("nv.yaml").exists()
+        self.temp_dir.path().join("nvy.yaml").exists()
     }
 
     fn get_config_contents(&self) -> String {
-        fs::read_to_string(self.temp_dir.path().join("nv.yaml")).unwrap()
+        fs::read_to_string(self.temp_dir.path().join("nvy.yaml")).unwrap()
     }
 }
 
@@ -44,7 +44,7 @@ fn test_init_creates_config_in_empty_directory() {
     env.create_env_file(".env.local", "APP_ENV=local").unwrap();
     env.create_env_file(".env.prod", "APP_ENV=production").unwrap();
 
-    AssertCommand::cargo_bin("nv").unwrap()
+    AssertCommand::cargo_bin("nvy").unwrap()
         .arg("init")
         .current_dir(&env.temp_dir)
         .assert()
@@ -53,7 +53,8 @@ fn test_init_creates_config_in_empty_directory() {
     assert!(env.assert_config_exists());
     
     let contents = env.get_config_contents();
-    let expected_config = r#"profiles:
+    let expected_config = r#"target: sh
+profiles:
   default:
   - path: .env
   local:
@@ -68,14 +69,15 @@ fn test_init_creates_config_in_empty_directory() {
 fn test_init_prompts_for_reinit_accepts() {
     let env = TestEnv::new();
     
-    env.create_config(r#"profiles:
+    env.create_config(r#"target: sh
+profiles:
   default:
     - path: .env"#).unwrap();
     
     env.create_env_file(".env", "APP_ENV=default").unwrap();
     env.create_env_file(".env.test", "APP_ENV=test").unwrap();
 
-    AssertCommand::cargo_bin("nv").unwrap()
+    AssertCommand::cargo_bin("nvy").unwrap()
         .arg("init")
         .current_dir(&env.temp_dir)
         .write_stdin("y\n")
@@ -83,7 +85,8 @@ fn test_init_prompts_for_reinit_accepts() {
         .success();
 
     let contents = env.get_config_contents();
-    let expected_config = r#"profiles:
+    let expected_config = r#"target: sh
+profiles:
   default:
   - path: .env
   test:
@@ -101,7 +104,7 @@ fn test_init_prompts_for_reinit_declines() {
     - path: .env"#;
     env.create_config(initial_config).unwrap();
     
-    AssertCommand::cargo_bin("nv").unwrap()
+    AssertCommand::cargo_bin("nvy").unwrap()
         .arg("init")
         .current_dir(&env.temp_dir)
         .write_stdin("n\n")
@@ -118,13 +121,14 @@ fn test_use_happy_path() {
     env.create_env_file(".env", "APP_ENV=default\nAPI_KEY=123").unwrap();
     env.create_env_file(".env.prod", "APP_ENV=production\nAPI_KEY=456").unwrap();
     
-    env.create_config(r#"profiles:
+    env.create_config(r#"target: sh
+profiles:
   default:
     - path: .env
   prod:
     - path: .env.prod"#).unwrap();
 
-    let assert = AssertCommand::cargo_bin("nv").unwrap()
+    let assert = AssertCommand::cargo_bin("nvy").unwrap()
         .arg("use")
         .arg("prod")
         .current_dir(&env.temp_dir)
@@ -144,7 +148,8 @@ fn test_use_unsets_previous_profile() {
     env.create_env_file(".env", "APP_ENV=default\nAPI_KEY=123").unwrap();
     env.create_env_file(".env.prod", "APP_ENV=production").unwrap();
     
-    env.create_config(r#"profiles:
+    env.create_config(r#"target: sh
+profiles:
   default:
     - path: .env
   prod:
@@ -154,7 +159,7 @@ fn test_use_unsets_previous_profile() {
     std::env::set_var("APP_ENV", "default");
     std::env::set_var("API_KEY", "123");
 
-    let assert = AssertCommand::cargo_bin("nv").unwrap()
+    let assert = AssertCommand::cargo_bin("nvy").unwrap()
         .arg("use")
         .arg("prod")
         .current_dir(&env.temp_dir)
@@ -170,25 +175,26 @@ fn test_use_unsets_previous_profile() {
 fn test_use_fails_without_init() {
     let env = TestEnv::new();
     
-    AssertCommand::cargo_bin("nv").unwrap()
+    AssertCommand::cargo_bin("nvy").unwrap()
         .arg("use")
         .arg("prod")
         .current_dir(&env.temp_dir)
         .assert()
         .failure()
-        .stderr(predicate::str::contains("nv.yaml does not exist"));
+        .stderr(predicate::str::contains("nvy.yaml does not exist"));
 }
 
 #[test]
 fn test_use_fails_with_nonexistent_profile() {
     let env = TestEnv::new();
     
-    env.create_config(r#"profiles:
+    env.create_config(r#"target: sh
+profiles:
   default:
     - path: .env"#).unwrap();
     env.create_env_file(".env", "APP_ENV=default").unwrap();
 
-    AssertCommand::cargo_bin("nv").unwrap()
+    AssertCommand::cargo_bin("nvy").unwrap()
         .arg("use")
         .arg("nonexistent")
         .current_dir(&env.temp_dir)
@@ -201,11 +207,12 @@ fn test_use_fails_with_nonexistent_profile() {
 fn test_use_fails_with_missing_env_file() {
     let env = TestEnv::new();
     
-    env.create_config(r#"profiles:
+    env.create_config(r#"target: sh
+profiles:
   prod:
     - path: .env.prod"#).unwrap();
 
-    AssertCommand::cargo_bin("nv").unwrap()
+    AssertCommand::cargo_bin("nvy").unwrap()
         .arg("use")
         .arg("prod")
         .current_dir(&env.temp_dir)
@@ -219,11 +226,12 @@ fn test_use_default_when_no_args() {
     let env = TestEnv::new();
     
     env.create_env_file(".env", "DEFAULT=1").unwrap();
-    env.create_config(r#"profiles:
+    env.create_config(r#"target: sh
+profiles:
   default:
     - path: .env"#).unwrap();
 
-    let assert = AssertCommand::cargo_bin("nv").unwrap()
+    let assert = AssertCommand::cargo_bin("nvy").unwrap()
         .arg("use")
         .current_dir(&env.temp_dir)
         .assert()
