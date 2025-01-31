@@ -1,7 +1,7 @@
 use anyhow::{anyhow, Result};
 use std::{collections::HashSet, fs};
 
-use crate::config::{does_config_exist, get_profile_path, load_config, CONFIG_FILE_NAME};
+use crate::config::{Config, does_config_exist, get_profile_path, load_config, CONFIG_FILE_NAME};
 
 const PROFILE_ENV_VAR: &str = "NV_CURRENT_PROFILE";
 
@@ -28,7 +28,7 @@ impl EnvVar {
     }
 }
 
-pub fn run_use(profile: &String) -> Result<()> {
+pub fn run_use(profiles: &Vec<String>) -> Result<()> {
     if !does_config_exist() {
         return Err(anyhow!(
             "{} does not exist in the current directory, please run `nv init` first.",
@@ -37,7 +37,21 @@ pub fn run_use(profile: &String) -> Result<()> {
     }
 
     let config = load_config()?;
-    let new_path = get_profile_path(&config, profile)?;
+    profiles.iter().for_each(|profile| {
+        let res = export_profile(&config, profile);
+        match res {
+            Ok(_) => (),
+            Err(e) => eprintln!("{}", e),
+        }
+    });
+
+    println!("export {}={}", PROFILE_ENV_VAR, escape_shell_value(&profiles.join(",")));
+
+    Ok(())
+}
+
+fn export_profile(config: &Config, profile: &String) -> Result<()> {
+    let new_path = get_profile_path(config, profile)?;
 
     if !does_file_exist(&new_path) {
         return Err(anyhow!(
@@ -53,16 +67,11 @@ pub fn run_use(profile: &String) -> Result<()> {
 
     let new_vars = parse_env_file(&new_path)?
         .into_iter()
-        .filter(EnvVar::is_valid)
-        .chain(std::iter::once(EnvVar::new(
-            PROFILE_ENV_VAR.to_string(),
-            Some(profile.clone()),
-        )));
+        .filter(EnvVar::is_valid);
 
     for var in unset_vars.chain(new_vars) {
         println!("{}", var.to_shell_command());
     }
-
     Ok(())
 }
 
@@ -77,8 +86,8 @@ fn escape_shell_value(value: &str) -> String {
 fn get_current_profile_vars() -> Result<HashSet<String>> {
     let mut vars = HashSet::new();
     
-    let current_profile = match std::env::var(PROFILE_ENV_VAR) {
-        Ok(profile) => profile,
+    let current_profiles = match std::env::var(PROFILE_ENV_VAR) {
+        Ok(profiles) => profiles,
         Err(_) => return Ok(vars),
     };
     
@@ -87,19 +96,21 @@ fn get_current_profile_vars() -> Result<HashSet<String>> {
         Err(_) => return Ok(vars),
     };
     
-    let path = match get_profile_path(&config, &current_profile) {
-        Ok(p) => p,
-        Err(_) => return Ok(vars),
-    };
-    
-    let contents = match fs::read_to_string(&path) {
-        Ok(c) => c,
-        Err(_) => return Ok(vars),
-    };
-    
-    for line in parse_env_line(&contents) {
-        if line.is_valid() {
-            vars.insert(line.key);
+    for profile in current_profiles.split(',') {
+        let path = match get_profile_path(&config, &profile.to_string()) {
+            Ok(p) => p,
+            Err(_) => continue,
+        };
+        
+        let contents = match fs::read_to_string(&path) {
+            Ok(c) => c,
+            Err(_) => continue,
+        };
+        
+        for line in parse_env_line(&contents) {
+            if line.is_valid() {
+                vars.insert(line.key);
+            }
         }
     }
     

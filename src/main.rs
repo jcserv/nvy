@@ -17,9 +17,10 @@ enum Commands {
     Init,
     /// Export the specific profile to the current shell
     Use {
-        /// The profile to use
-        #[arg(default_value = "default")]
-        profile: String,
+        /// The profiles to use. If overlapping environment variables are defined, the last one wins.
+        #[arg(num_args = 1..)] 
+        #[arg(default_values_t = vec!["default".to_string()])]
+        profiles: Vec<String>,
     }
 }
 
@@ -30,8 +31,8 @@ fn main() -> Result<()> {
         Commands::Init => {
             run_init()?;
         },
-        Commands::Use { profile } => {
-            run_use(profile)?;
+        Commands::Use { profiles } => {
+            run_use(profiles)?;
         },
     }
 

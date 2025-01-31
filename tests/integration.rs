@@ -213,3 +213,23 @@ fn test_use_fails_with_missing_env_file() {
         .failure()
         .stderr(predicate::str::contains("does not exist"));
 }
+
+#[test]
+fn test_use_default_when_no_args() {
+    let env = TestEnv::new();
+    
+    env.create_env_file(".env", "DEFAULT=1").unwrap();
+    env.create_config(r#"profiles:
+  default:
+    - path: .env"#).unwrap();
+
+    let assert = AssertCommand::cargo_bin("nv").unwrap()
+        .arg("use")
+        .current_dir(&env.temp_dir)
+        .assert()
+        .success();
+
+    let output = String::from_utf8(assert.get_output().stdout.clone()).unwrap();
+    assert!(output.contains("export DEFAULT='1'"));
+    assert!(output.contains("export NV_CURRENT_PROFILE='default'"));
+}
