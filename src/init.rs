@@ -85,7 +85,7 @@ fn init_config(env_files: Vec<PathBuf>) -> Result<()> {
     let yaml = to_string(&config)?;
     fs::write(CONFIG_FILE_NAME, yaml)?;
 
-    success("Initialized nv.yml in the current directory.");
+    success("Initialized nv.yaml in the current directory.");
     Ok(())
 }
 
@@ -109,11 +109,11 @@ mod tests {
         let empty_files = Vec::new();
         init_config(empty_files)?;
 
-        let content = fs::read_to_string("nv.yml")?;
+        let content = fs::read_to_string("nv.yaml")?;
         assert!(content.contains("default:"));
         assert!(content.contains("path: .env"));
         
-        fs::remove_file("nv.yml")?;
+        fs::remove_file("nv.yaml")?;
         Ok(())
     }
 }
