@@ -1,6 +1,6 @@
 [package]
 name = "nv"
-version = "0.3.0"
+version = "1.0.0"
 authors = ["Jarrod Servilla <jarrod.servilla@gmail.com>"]
 license = "GPL-3.0-or-later"
 description = "A simple command line tool for managing multiple env files (profiles) in a project."
