@@ -18,6 +18,7 @@ enum Commands {
     /// Export the specific profile to the current shell
     Use {
         /// The profile to use
+        #[arg(default_value = "default")]
         profile: String,
     }
 }
