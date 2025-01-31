@@ -2,18 +2,19 @@
 
 nv (pronounced "ehn-vee", like the word "envy") is a simple command line tool for managing multiple env files (profiles) in a project.
 
+child processes cannot modify the environment of the parent process, so the `use` command outputs the command text which can be eval'd to set the environment variables.
+
 ## usage
 
-`nv init` - to create a new nv.yaml file
+1. `cargo install nv`
+2. `nv init` - to create a new nv.yaml file
+3. `chmod +x nv.sh`
+4. `eval "$(./target/debug/nv use <profile>)"` - to switch between profiles
 
-`nv use <profile>` - to switch between profiles
-
-nv.yaml
 ```yaml
-version: 0.1.0
 profiles:
   default:
-    - path: .env # or ./.env 
+    - path: .env
   local:
     - path: .env.local
   prod:

@@ -6,7 +6,7 @@ use std::fs;
 use std::io::{self};
 use std::path::PathBuf;
 
-use crate::config::{Config, Profile};
+use crate::config::{does_config_exist, Config, Profile, CONFIG_FILE_NAME};
 use crate::log::{message, success, warn};
 
 pub fn run_init() -> Result<()> {
@@ -19,12 +19,7 @@ pub fn run_init() -> Result<()> {
 
     let env_files = discover_env_files()?;
     init_config(env_files)?;
-
     Ok(())
-}
-
-fn does_config_exist() -> bool {
-    fs::metadata("nv.yaml").is_ok() || fs::metadata("nv.yml").is_ok()
 }
 
 fn prompt_reinit() -> Result<bool> {
@@ -64,7 +59,6 @@ fn get_profile_name(file_name: &str) -> Option<String> {
 
 fn init_config(env_files: Vec<PathBuf>) -> Result<()> {
     let mut profiles = BTreeMap::new();
-    let version = String::from("0.1.0");
 
     profiles.insert(
         "default".to_string(),
@@ -87,9 +81,9 @@ fn init_config(env_files: Vec<PathBuf>) -> Result<()> {
         }
     }
 
-    let config = Config { version, profiles };
+    let config = Config { profiles };
     let yaml = to_string(&config)?;
-    fs::write("nv.yml", yaml)?;
+    fs::write(CONFIG_FILE_NAME, yaml)?;
 
     success("Initialized nv.yml in the current directory.");
     Ok(())
