@@ -241,3 +241,197 @@ profiles:
     assert!(output.contains("export DEFAULT='1'"));
     assert!(output.contains("export NV_CURRENT_PROFILE='default'"));
 }
+
+#[test]
+fn test_init_preserves_custom_target() {
+    let env = TestEnv::new();
+    
+    // Create initial config with custom target
+    env.create_config(r#"target: .env.local
+profiles:
+  default:
+    - path: .env"#).unwrap();
+    
+    env.create_env_file(".env", "APP_ENV=default").unwrap();
+    env.create_env_file(".env.prod", "APP_ENV=production").unwrap();
+    env.create_env_file(".env.local", "").unwrap();
+
+    AssertCommand::cargo_bin("nvy").unwrap()
+        .arg("init")
+        .current_dir(&env.temp_dir)
+        .write_stdin("y\n")
+        .assert()
+        .success();
+
+    let contents = env.get_config_contents();
+    let expected_config = r#"target: .env.local
+profiles:
+  default:
+  - path: .env
+  prod:
+  - path: .env.prod
+"#;
+    assert_eq!(contents, expected_config);
+}
+
+#[test]
+fn test_use_multiple_profiles() {
+    let env = TestEnv::new();
+    
+    env.create_env_file(".env.base", "SHARED=base\nBASE_ONLY=value").unwrap();
+    env.create_env_file(".env.override", "SHARED=override\nOVERRIDE_ONLY=value").unwrap();
+    
+    env.create_config(r#"target: sh
+profiles:
+  base:
+    - path: .env.base
+  override:
+    - path: .env.override"#).unwrap();
+
+    let assert = AssertCommand::cargo_bin("nvy").unwrap()
+        .arg("use")
+        .arg("base")
+        .arg("override")
+        .current_dir(&env.temp_dir)
+        .assert()
+        .success();
+    
+    let output = String::from_utf8(assert.get_output().stdout.clone()).unwrap();
+    
+    assert!(output.contains("export SHARED='override'"));
+    assert!(output.contains("export BASE_ONLY='value'"));
+    assert!(output.contains("export OVERRIDE_ONLY='value'"));
+    assert!(output.contains("export NV_CURRENT_PROFILE='base,override'"));
+}
+
+#[test]
+fn test_use_multiple_profiles_with_custom_target() {
+    let env = TestEnv::new();
+    
+    env.create_env_file(".env.base", "SHARED=base\nBASE_ONLY=value").unwrap();
+    env.create_env_file(".env.override", "SHARED=override\nOVERRIDE_ONLY=value").unwrap();
+    env.create_env_file(".env.target", "").unwrap();
+    
+    env.create_config(r#"target: .env.target
+profiles:
+  base:
+    - path: .env.base
+  override:
+    - path: .env.override"#).unwrap();
+
+    AssertCommand::cargo_bin("nvy").unwrap()
+        .arg("use")
+        .arg("base")
+        .arg("override")
+        .current_dir(&env.temp_dir)
+        .assert()
+        .success();
+    
+    let target_contents = fs::read_to_string(env.temp_dir.path().join(".env.target")).unwrap();
+    assert!(target_contents.contains("SHARED=override"));
+    assert!(target_contents.contains("BASE_ONLY=value"));
+    assert!(target_contents.contains("OVERRIDE_ONLY=value"));
+}
+
+#[test]
+fn test_init_ignores_target_env_file() {
+    let env = TestEnv::new();
+    
+    env.create_config(r#"target: .env.local
+profiles:
+  default:
+    - path: .env"#).unwrap();
+    
+    env.create_env_file(".env", "APP_ENV=default").unwrap();
+    env.create_env_file(".env.local", "APP_ENV=local").unwrap();
+    env.create_env_file(".env.prod", "APP_ENV=prod").unwrap();
+
+    AssertCommand::cargo_bin("nvy").unwrap()
+        .arg("init")
+        .current_dir(&env.temp_dir)
+        .write_stdin("y\n")
+        .assert()
+        .success();
+
+    let contents = env.get_config_contents();
+    assert!(!contents.contains("local:"));
+    assert!(contents.contains("prod:"));
+}
+
+#[test]
+fn test_use_profile_with_invalid_env_vars() {
+    let env = TestEnv::new();
+    
+    env.create_env_file(".env.test", r#"VALID_VAR=123
+INVALID-VAR=456
+ANOTHER_VALID=789
+INVALID@VAR=abc"#).unwrap();
+    
+    env.create_config(r#"target: sh
+profiles:
+  test:
+    - path: .env.test"#).unwrap();
+
+    let assert = AssertCommand::cargo_bin("nvy").unwrap()
+        .arg("use")
+        .arg("test")
+        .current_dir(&env.temp_dir)
+        .assert()
+        .success();
+    
+    let output = String::from_utf8(assert.get_output().stdout.clone()).unwrap();
+    assert!(output.contains("export VALID_VAR='123'"));
+    assert!(output.contains("export ANOTHER_VALID='789'"));
+    assert!(!output.contains("INVALID-VAR"));
+    assert!(!output.contains("INVALID@VAR"));
+}
+
+#[test]
+fn test_use_with_empty_profile() {
+    let env = TestEnv::new();
+    
+    env.create_env_file(".env.empty", "").unwrap();
+    
+    env.create_config(r#"target: sh
+profiles:
+  empty:
+    - path: .env.empty"#).unwrap();
+
+    let assert = AssertCommand::cargo_bin("nvy").unwrap()
+        .arg("use")
+        .arg("empty")
+        .current_dir(&env.temp_dir)
+        .assert()
+        .success();
+    
+    let output = String::from_utf8(assert.get_output().stdout.clone()).unwrap();
+    assert_eq!(output.trim(), "export NV_CURRENT_PROFILE='empty'");
+}
+
+#[test]
+fn test_init_ignores_example_env() {
+    let env = TestEnv::new();
+    
+    env.create_env_file(".env", "APP_ENV=default").unwrap();
+    env.create_env_file(".env.prod", "APP_ENV=prod").unwrap();
+    env.create_env_file(".env.example", "APP_ENV=example\nDB_URL=example").unwrap();
+
+    AssertCommand::cargo_bin("nvy").unwrap()
+        .arg("init")
+        .current_dir(&env.temp_dir)
+        .assert()
+        .success();
+
+    let contents = env.get_config_contents();
+    let expected_config = r#"target: sh
+profiles:
+  default:
+  - path: .env
+  prod:
+  - path: .env.prod
+"#;
+    assert_eq!(contents, expected_config);
+    
+    assert!(!contents.contains("example"));
+    assert!(!contents.contains(".env.example"));
+}
