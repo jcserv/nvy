@@ -1,12 +1,12 @@
 [package]
-name = "nv"
+name = "nvy"
 version = "1.0.0"
 authors = ["Jarrod Servilla <jarrod.servilla@gmail.com>"]
 license = "GPL-3.0-or-later"
 description = "A simple command line tool for managing multiple env files (profiles) in a project."
 readme = "README.md"
-homepage = "https://github.com/jcserv/nv"
-repository = "https://github.com/jcserv/nv"
+homepage = "https://github.com/jcserv/nvy"
+repository = "https://github.com/jcserv/nvy"
 keywords = ["cli", "env", "config", "environment"]
 categories = ["command-line-utilities"]
 edition = "2021"

@@ -1,8 +1,8 @@
 use anyhow::Result;
 use clap::{Parser, Subcommand};
 
-use nv::init::run_init;
-use nv::r#use::run_use;
+use nvy::init::run_init;
+use nvy::r#use::run_use;
 
 #[derive(Parser)]
 #[command(author, version, about, long_about = None)]
