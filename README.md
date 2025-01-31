@@ -10,8 +10,12 @@ child processes cannot modify the environment of the parent process, so the `use
 
 1. `cargo install nvy`
 2. `nvy init` - to create a new nvy.yaml file
-3. `eval "$(nvy use <profile>)"` - to switch between profiles
-- You can add an alias to your shell config to make this easier: `alias nv='eval "$(nv use $1)"'` 
+3. `nvy use <profile>` - to switch between profiles
+4. (optional) `nvy export <target-file>` - to configure exporting the environment variables to a file
+
+shell mode:
+- `eval "$(nvy use <profile>)"` - to switch between profiles
+- You can add an alias to your shell config to make this easier: `alias nv='eval "$(nvy use $1)"'` 
 
 ## why 🤔
 
