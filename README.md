@@ -9,7 +9,7 @@ child processes cannot modify the environment of the parent process, so the `use
 1. `cargo install nv`
 2. `nv init` - to create a new nv.yaml file
 3. `chmod +x nv.sh`
-4. `eval "$(./target/debug/nv use <profile>)"` - to switch between profiles
+4. `eval "$(nv use <profile>)"` - to switch between profiles
 
 ```yaml
 profiles:
