@@ -1,0 +1,20 @@
+[package]
+name = "nv"
+version = "0.1.0"
+authors = ["Jarrod Servilla <jarrod.servilla@gmail.com>"]
+license = "GPL-3.0-or-later"
+description = "A simple command line tool for managing multiple env files (profiles) in a project."
+readme = "README.md"
+homepage = "https://github.com/jcserv/nv"
+repository = "https://github.com/jcserv/nv"
+keywords = ["cli", "env", "config", "environment"]
+categories = ["command-line-utilities"]
+edition = "2021"
+
+[dependencies]
+anyhow = { version = "1.0.95", features = ["backtrace"] }
+clap = { version = "4.5.27", features = ["derive"] }
+glob = "0.3.2"
+inline_colorization = "0.1.6"
+serde = { version = "1.0.217", features = ["derive"] }
+serde_yaml = "0.9.34"
