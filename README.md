@@ -2,7 +2,11 @@
 
 nv (pronounced "ehn-vee", like the word "envy") is a simple command line tool for managing multiple env files (profiles) in a project.
 
-`nv use <profile>` to switch between profiles
+## usage
+
+`nv init` - to create a new nv.yaml file
+
+`nv use <profile>` - to switch between profiles
 
 nv.yaml
 ```yaml
