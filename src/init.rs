@@ -5,7 +5,8 @@ use std::io::{self};
 use std::path::PathBuf;
 
 use crate::config::{does_config_exist, is_target_shell, load_config, save_config, Config, Profile, TARGET_SHELL};
-use crate::log::{message, success, warn, wrap_yellow};
+use crate::log::{message, wrap_yellow};
+use crate::{success, warn};
 
 pub fn run_init() -> Result<()> {
     let mut target = String::from(TARGET_SHELL);
@@ -13,7 +14,7 @@ pub fn run_init() -> Result<()> {
 
     if does_config_exist() {
         if !prompt_reinit()? {
-            warn("Initialization cancelled.");
+            warn!("Initialization cancelled.");
             return Ok(());
         }
 
@@ -103,7 +104,7 @@ fn init_config(target: &str, env_files: Vec<PathBuf>) -> Result<()> {
     let res = save_config(&config);
     match res {
         Ok(()) => {
-            success("Initialized nvy.yaml in the current directory.");
+            success!("Initialized nvy.yaml in the current directory.");
             Ok(())
         },
         Err(e) => Err(anyhow::anyhow!(e)),

@@ -1,7 +1,7 @@
 use anyhow::{anyhow, Result};
 use std::{collections::{HashMap, HashSet}, fs};
 
-use crate::config::{does_config_exist, get_profile_path, is_target_shell, load_config, Config, CONFIG_FILE_NAME};
+use crate::{config::{does_config_exist, get_profile_path, is_target_shell, load_config, Config, CONFIG_FILE_NAME}, success};
 
 const PROFILE_ENV_VAR: &str = "NV_CURRENT_PROFILE";
 
@@ -78,8 +78,9 @@ pub fn run_use(profiles: &Vec<String>) -> Result<()> {
                 content.push('\n');
             }
         }
-
+        let target = config.target.clone();
         fs::write(config.target, content)?;
+        success!("Exported profile(s) {} to file {}", profiles.join(", "), target);
     }
 
     Ok(())

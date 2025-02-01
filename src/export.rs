@@ -1,7 +1,6 @@
 use anyhow::{anyhow, Result};
 
-use crate::config::{does_config_exist, load_config, save_config,CONFIG_FILE_NAME};
-use crate::log::success;
+use crate::{config::{does_config_exist, load_config, save_config,CONFIG_FILE_NAME}, success};
 
 pub fn run_export(target: &String) -> Result<()> {
     if !does_config_exist() {
@@ -16,7 +15,7 @@ pub fn run_export(target: &String) -> Result<()> {
     save_config(&config)?;
 
     let msg = format!("Target set to {}", target);
-    success(&msg);
+    success!(&msg);
 
     Ok(())
 }

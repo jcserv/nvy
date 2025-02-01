@@ -5,16 +5,55 @@ pub fn wrap_yellow(message: &str) -> String {
     format!("{color_yellow}{message}{color_reset}")
 }
 
-pub fn success(message: &str) {
-    println!("{color_green}Success{color_reset}\t{message}");
+#[macro_export]
+macro_rules! __log_internal {
+    ($predicate:expr, $color:expr, $template:expr) => {
+        println!("{}{}{}\t{}", 
+            $color,
+            $predicate,
+            inline_colorization::color_reset,
+            $template
+        );
+    };
+    ($predicate:expr, $color:expr, $template:expr, $($arg:tt)*) => {
+        println!(
+            "{}{}{}\t{}", 
+            $color,
+            $predicate,
+            inline_colorization::color_reset,
+            format!($template, $($arg)*)
+        );
+    };
 }
 
-pub fn warn(message: &str) {
-    println!("{color_green}Warning{color_reset}\t{message}");
+#[macro_export]
+macro_rules! success {
+    ($template:expr) => {
+        crate::__log_internal!("Success", inline_colorization::color_green, $template);
+    };
+    ($template:expr, $($arg:tt)*) => {
+        crate::__log_internal!("Success", inline_colorization::color_green, $template, $($arg)*);
+    };
 }
 
-pub fn error(message: &str) {
-    println!("{color_red}Error{color_reset}\t{message}");
+#[macro_export]
+macro_rules! warn {
+    ($template:expr) => {
+        crate::__log_internal!("Warning", inline_colorization::color_yellow, $template);
+    };
+    ($template:expr, $($arg:tt)*) => {
+        crate::__log_internal!("Warning", inline_colorization::color_yellow, $template, $($arg)*);
+    };
+}
+
+#[macro_export]
+macro_rules! error {
+    ($template:expr) => {
+        crate::__log_internal!("Error", inline_colorization::color_red, $template);
+    };
+    ($template:expr, $($arg:tt)*) => {
+        crate::__log_internal!("Error", inline_colorization::color_red, $template, $($arg)*);
+    };
 }
 
 pub fn message(messages: Vec<&str>) {
