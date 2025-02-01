@@ -6,6 +6,9 @@ use std::fs;
 
 pub const TARGET_SHELL: &str = "sh";
 
+/// Set it to this so that there's no chance of accidentally overwriting a user's config
+pub const DEFAULT_TARGET: &str = ".env.nvy";
+
 pub const CONFIG_FILE_NAME: &str = "nvy.yaml";
 
 #[derive(Serialize, Deserialize)]

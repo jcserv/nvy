@@ -4,12 +4,12 @@ use std::collections::BTreeMap;
 use std::io::{self};
 use std::path::PathBuf;
 
-use crate::config::{does_config_exist, is_target_shell, load_config, save_config, Config, Profile, TARGET_SHELL};
+use crate::config::{does_config_exist, is_target_shell, load_config, save_config, Config, Profile, DEFAULT_TARGET};
 use crate::log::{message, wrap_yellow};
 use crate::{success, warn};
 
 pub fn run_init() -> Result<()> {
-    let mut target = String::from(TARGET_SHELL);
+    let mut target = String::from(DEFAULT_TARGET);
     let mut ignore = vec![".env.example".to_string()];
 
     if does_config_exist() {
@@ -104,7 +104,7 @@ fn init_config(target: &str, env_files: Vec<PathBuf>) -> Result<()> {
     let res = save_config(&config);
     match res {
         Ok(()) => {
-            success!("Initialized nvy.yaml in the current directory.");
+            success!("Initialized nvy.yaml in file mode, pointing to {}; run `nvy export <file>` to change the target.", DEFAULT_TARGET);
             Ok(())
         },
         Err(e) => Err(anyhow::anyhow!(e)),
@@ -114,6 +114,7 @@ fn init_config(target: &str, env_files: Vec<PathBuf>) -> Result<()> {
 #[cfg(test)]
 mod tests {
     use std::fs;
+    use crate::config::TARGET_SHELL;
 
     use super::*;
 

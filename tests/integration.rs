@@ -53,7 +53,7 @@ fn test_init_creates_config_in_empty_directory() {
     assert!(env.assert_config_exists());
     
     let contents = env.get_config_contents();
-    let expected_config = r#"target: sh
+    let expected_config = r#"target: .env.nvy
 profiles:
   default:
   - path: .env
@@ -69,7 +69,7 @@ profiles:
 fn test_init_prompts_for_reinit_accepts() {
     let env = TestEnv::new();
     
-    env.create_config(r#"target: sh
+    env.create_config(r#"target: .env.nvy
 profiles:
   default:
     - path: .env"#).unwrap();
@@ -85,7 +85,7 @@ profiles:
         .success();
 
     let contents = env.get_config_contents();
-    let expected_config = r#"target: sh
+    let expected_config = r#"target: .env.nvy
 profiles:
   default:
   - path: .env
@@ -423,7 +423,7 @@ fn test_init_ignores_example_env() {
         .success();
 
     let contents = env.get_config_contents();
-    let expected_config = r#"target: sh
+    let expected_config = r#"target: .env.nvy
 profiles:
   default:
   - path: .env
