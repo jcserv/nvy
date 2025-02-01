@@ -1,6 +1,6 @@
 # nvy 😡
 
-![visitors](https://img.shields.io/endpoint?url=https://vu-mi.com/api/v1/views?id=jcserv/nv)
+![visitors](https://img.shields.io/endpoint?url=https://vu-mi.com/api/v1/views?id=jcserv/nv) ![downloads](https://img.shields.io/crates/dv/nvy)
 
 nvy (pronounced "ehn-vee", like the word "envy") is a simple command line tool for managing multiple env files (profiles) in a project.
 
@@ -37,3 +37,4 @@ also, this was an opportunity for me to learn Rust by doing.
 
 ## references 📚
 - [Command Line Applications in Rust](https://rust-cli.github.io/book/index.html)
+- [How to Deploy Rust Binaries with GitHub Actions](https://dzfrias.dev/blog/deploy-rust-cross-platform-github-actions/)
