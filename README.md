@@ -10,6 +10,11 @@ nvy (pronounced "ehn-vee", like the word "envy") is a simple command line tool f
 
 ## installation 📦
 
+### homebrew
+`brew tap jcserv/nvy`
+`brew install nvy`
+
+### cargo
 `cargo install nvy`
 
 ## usage ⚙️ 
@@ -38,3 +43,4 @@ also, this was an opportunity for me to learn Rust by doing.
 ## references 📚
 - [Command Line Applications in Rust](https://rust-cli.github.io/book/index.html)
 - [How to Deploy Rust Binaries with GitHub Actions](https://dzfrias.dev/blog/deploy-rust-cross-platform-github-actions/)
+- [How to Publish your Rust project on Homebrew](https://federicoterzi.com/blog/how-to-publish-your-rust-project-on-homebrew/)
