@@ -1,6 +1,6 @@
 # nvy 😡
 
-![visitors](https://img.shields.io/endpoint?url=https://vu-mi.com/api/v1/views?id=jcserv/nv) ![downloads](https://img.shields.io/crates/dv/nvy)
+![visitors](https://img.shields.io/endpoint?url=https://vu-mi.com/api/v1/views?id=jcserv/nv) ![downloads](https://img.shields.io/crates/d/nvy)
 
 nvy (pronounced "ehn-vee", like the word "envy") is a simple command line tool for managing multiple env files (profiles) in a project.
 
