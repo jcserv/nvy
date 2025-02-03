@@ -115,7 +115,9 @@ fn export_profile(config: &Config, profile: &String) -> Result<ExportResult> {
 }
 
 fn escape_shell_value(value: &str) -> String {
-    format!("'{}'", value.replace('\'', "'\\''"))
+    // trim any surrounding quotes if they exist
+    let clean_value = value.trim_matches(|c| c == '"' || c == '\'');
+    format!("'{}'", clean_value.replace('\'', "'\\''"))
 }
 
 fn does_file_exist(path: &str) -> bool {
@@ -171,4 +173,49 @@ fn parse_env_line(contents: &str) -> impl Iterator<Item = EnvVar> + '_ {
         let (key, value) = line.split_once('=')?;
         Some(EnvVar::new(key.trim().to_string(), Some(value.trim().to_string())))
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_escape_shell_value_should_wrap_basic_string_in_quotes() {
+        assert_eq!(escape_shell_value("hello"), "'hello'");
+    }
+
+    #[test]
+    fn test_escape_shell_value_should_remove_existing_double_quotes() {
+        assert_eq!(escape_shell_value("\"hello\""), "'hello'");
+    }
+
+    #[test]
+    fn test_escape_shell_value_should_remove_existing_single_quotes() {
+        assert_eq!(escape_shell_value("'hello'"), "'hello'");
+    }
+
+    #[test]
+    fn test_escape_shell_value_should_escape_internal_single_quotes() {
+        assert_eq!(escape_shell_value("he'llo"), "'he'\\''llo'");
+    }
+
+    #[test]
+    fn test_escape_shell_value_should_preserve_internal_double_quotes() {
+        assert_eq!(escape_shell_value("he\"llo"), "'he\"llo'");
+    }
+
+    #[test]
+    fn test_escape_shell_value_should_handle_empty_string() {
+        assert_eq!(escape_shell_value(""), "''");
+    }
+
+    #[test]
+    fn test_escape_shell_value_should_handle_mixed_quotes() {
+        assert_eq!(escape_shell_value("\"hello'world\""), "'hello'\\''world'");
+    }
+
+    #[test]
+    fn test_escape_shell_value_should_handle_multiple_internal_single_quotes() {
+        assert_eq!(escape_shell_value("it's O'clock"), "'it'\\''s O'\\''clock'");
+    }
 }
