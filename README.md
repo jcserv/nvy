@@ -12,9 +12,15 @@ nvy (pronounced "ehn-vee", like the word "envy") is a simple command line tool f
 
 ### homebrew
 `brew tap jcserv/nvy`
+
 `brew install nvy`
 
 ### cargo
+
+`cargo binstall nvy` ([cargo-binstall](https://github.com/cargo-bins/cargo-binstall?tab=readme-ov-file#installation))
+
+or
+
 `cargo install nvy`
 
 ## usage ⚙️ 
