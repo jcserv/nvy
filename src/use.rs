@@ -9,11 +9,12 @@ const PROFILE_ENV_VAR: &str = "NV_CURRENT_PROFILE";
 struct EnvVar {
     key: String,
     value: Option<String>,
+    source_profile: String,
 }
 
 impl EnvVar {
-    fn new(key: String, value: Option<String>) -> Self {
-        Self { key, value }
+    fn new(key: String, value: Option<String>, source_profile: String) -> Self {
+        Self { key, value, source_profile }
     }
 
     fn is_valid(&self) -> bool {
@@ -22,19 +23,20 @@ impl EnvVar {
 
     fn to_shell_command(&self) -> String {
         match &self.value {
-            Some(val) => format!("export {}={}", self.key, escape_shell_value(val)),
-            None => format!("unset {}", self.key),
+            Some(val) => format!("export {}={}", display_key(&self.key), escape_shell_value(val)),
+            None => format!("unset {}", display_key(&self.key)),
         }
     }
 
     fn to_env_file_line(&self) -> Option<String> {
-        self.value.as_ref().map(|val| format!("{}={}", self.key, val))
+        self.value.as_ref().map(|val| format!("{}={}", display_key(&self.key), val))
     }
 }
 
 struct ExportResult {
     unset_vars: BTreeMap<String, EnvVar>,
     new_vars: BTreeMap<String, EnvVar>,
+    profile_order: Vec<String>,
 }
 
 pub fn run_use(profiles: &Vec<String>) -> Result<()> {
@@ -48,11 +50,15 @@ pub fn run_use(profiles: &Vec<String>) -> Result<()> {
     let mut result = ExportResult {
         unset_vars: BTreeMap::new(),
         new_vars: BTreeMap::new(),
+        profile_order: Vec::new(),
     };
 
     let config = load_config()?;
 
     for profile in profiles {
+        let profile_str = profile.to_string();
+        result.profile_order.push(profile_str.clone());
+
         let profile_vars = export_profile(&config, profile)?;
         result.unset_vars.extend(profile_vars.unset_vars);
         result.new_vars.extend(profile_vars.new_vars);
@@ -62,9 +68,27 @@ pub fn run_use(profiles: &Vec<String>) -> Result<()> {
         for (_, var) in result.unset_vars {
             println!("{}", var.to_shell_command());
         }
-        for (_, var) in result.new_vars {
-            println!("{}", var.to_shell_command());
+        
+        let mut profile_groups: BTreeMap<String, BTreeMap<String, &EnvVar>> = BTreeMap::new();
+        for var in result.new_vars.values() {
+            profile_groups
+                .entry(var.source_profile.clone())
+                .or_default()
+                .insert(var.key.clone(), var);
         }
+        
+        for profile in result.profile_order {
+            if let Some(vars) = profile_groups.get(&profile) {
+                if !vars.is_empty() {
+                    println!("# {}", profile);
+                    for (_, var) in vars {
+                        println!("{}", var.to_shell_command());
+                    }
+                    println!();
+                }
+            }
+        }
+        
         println!(
             "export {}={}",
             PROFILE_ENV_VAR,
@@ -72,12 +96,33 @@ pub fn run_use(profiles: &Vec<String>) -> Result<()> {
         );
     } else {
         let mut content = String::new();
-        for (_, var) in result.new_vars {
-            if let Some(line) = var.to_env_file_line() {
-                content.push_str(&line);
-                content.push('\n');
+        
+        let mut profile_groups: BTreeMap<String, BTreeMap<String, &EnvVar>> = BTreeMap::new();
+        for var in result.new_vars.values() {
+            profile_groups
+                .entry(var.source_profile.clone())
+                .or_default()
+                .insert(var.key.clone(), var);
+        }
+        
+        for profile in result.profile_order {
+            if let Some(vars) = profile_groups.get(&profile) {
+                if !vars.is_empty() {
+                    content.push_str(&format!("# {}\n", profile));
+                    for (_, var) in vars {
+                        if let Some(line) = var.to_env_file_line() {
+                            content.push_str(&line);
+                            content.push('\n');
+                        }
+                    }
+                    content.push('\n');
+                }
             }
         }
+        
+        content = content.trim_end().to_string();
+        content.push('\n');
+        
         let target = config.target.clone();
         fs::write(config.target, content)?;
         success!("Exported profile(s) {} to file {}", profiles.join(", "), target);
@@ -99,19 +144,27 @@ fn export_profile(config: &Config, profile: &String) -> Result<ExportResult> {
 
     let unset_vars = get_current_profile_vars()?
         .into_iter()
-        .map(|key| (key.clone(), EnvVar::new(key, None)))
+        .map(|key| (key.clone(), EnvVar::new(key, None, "".to_string())))
         .collect();
 
-    let new_vars = parse_env_file(&new_path)?
+        let new_vars = parse_env_file(&new_path, profile)?
         .into_iter()
-        .filter(|var| var.is_valid())
+        .filter(|var| {
+            let actual_key = var.key.split_once('_').map(|(_, k)| k).unwrap_or(&var.key);
+            actual_key.chars().all(|c| c.is_ascii_alphanumeric() || c == '_')
+        })
         .map(|var| (var.key.clone(), var))
         .collect();
 
     Ok(ExportResult {
         unset_vars,
         new_vars,
+        profile_order: Vec::new(),
     })
+}
+
+fn display_key(key: &str) -> &str {
+    key.split_once('_').map(|(_, k)| k).unwrap_or(key)
 }
 
 fn escape_shell_value(value: &str) -> String {
@@ -148,7 +201,7 @@ fn get_current_profile_vars() -> Result<HashSet<String>> {
             Err(_) => continue,
         };
         
-        for line in parse_env_line(&contents) {
+        for line in parse_env_line(&contents, profile) {
             if line.is_valid() {
                 vars.insert(line.key);
             }
@@ -158,20 +211,24 @@ fn get_current_profile_vars() -> Result<HashSet<String>> {
     Ok(vars)
 }
 
-fn parse_env_file(path: &str) -> Result<Vec<EnvVar>> {
+fn parse_env_file(path: &str, profile: &str) -> Result<Vec<EnvVar>> {
     let contents = fs::read_to_string(path)?;
-    Ok(parse_env_line(&contents).collect())
+    Ok(parse_env_line(&contents, profile).collect())
 }
 
-fn parse_env_line(contents: &str) -> impl Iterator<Item = EnvVar> + '_ {
-    contents.lines().filter_map(|line| {
+fn parse_env_line<'a>(contents: &'a str, profile: &'a str) -> impl Iterator<Item = EnvVar> + 'a {
+    contents.lines().enumerate().filter_map(move |(idx, line)| {
         let line = line.trim();
         if line.is_empty() || line.starts_with('#') {
             return None;
         }
 
         let (key, value) = line.split_once('=')?;
-        Some(EnvVar::new(key.trim().to_string(), Some(value.trim().to_string())))
+        Some(EnvVar::new(
+            format!("{:010}_{}", idx, key.trim()),  // Pad with zeros for proper sorting
+            Some(value.trim().to_string()),
+            profile.to_string()
+        ))
     })
 }
 
