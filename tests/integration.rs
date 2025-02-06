@@ -298,9 +298,13 @@ profiles:
     
     let actual = String::from_utf8(assert.get_output().stdout.clone()).unwrap();
 
-    let expected = r#"export BASE_ONLY='value'
-export OVERRIDE_ONLY='value'
+    let expected = r#"# base
+export BASE_ONLY='value'
+
+# override
 export SHARED='override'
+export OVERRIDE_ONLY='value'
+
 export NV_CURRENT_PROFILE='base,override'
 "#;
     
@@ -332,9 +336,12 @@ profiles:
     
     let actual = fs::read_to_string(env.temp_dir.path().join(".env.target")).unwrap();
 
-    let expected = r#"BASE_ONLY=value
-OVERRIDE_ONLY=value
+    let expected = r#"# base
+BASE_ONLY=value
+
+# override
 SHARED=override
+OVERRIDE_ONLY=value
 "#;
     
     assert_eq!(actual, expected);
