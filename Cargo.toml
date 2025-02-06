@@ -8,7 +8,7 @@ readme = "README.md"
 homepage = "https://github.com/jcserv/nvy"
 repository = "https://github.com/jcserv/nvy"
 keywords = ["cli", "env", "config", "environment"]
-categories = ["command-line-utilities"]
+categories = ["command-line-utilities", "development-tools"]
 edition = "2021"
 
 [dependencies]

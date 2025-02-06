@@ -296,12 +296,15 @@ profiles:
         .assert()
         .success();
     
-    let output = String::from_utf8(assert.get_output().stdout.clone()).unwrap();
+    let actual = String::from_utf8(assert.get_output().stdout.clone()).unwrap();
+
+    let expected = r#"export BASE_ONLY='value'
+export SHARED='override'
+export OVERRIDE_ONLY='value'
+export NV_CURRENT_PROFILE='base,override'
+"#;
     
-    assert!(output.contains("export SHARED='override'"));
-    assert!(output.contains("export BASE_ONLY='value'"));
-    assert!(output.contains("export OVERRIDE_ONLY='value'"));
-    assert!(output.contains("export NV_CURRENT_PROFILE='base,override'"));
+    assert_eq!(actual, expected);
 }
 
 #[test]
@@ -327,10 +330,14 @@ profiles:
         .assert()
         .success();
     
-    let target_contents = fs::read_to_string(env.temp_dir.path().join(".env.target")).unwrap();
-    assert!(target_contents.contains("SHARED=override"));
-    assert!(target_contents.contains("BASE_ONLY=value"));
-    assert!(target_contents.contains("OVERRIDE_ONLY=value"));
+    let actual = fs::read_to_string(env.temp_dir.path().join(".env.target")).unwrap();
+
+    let expected = r#"BASE_ONLY=value
+SHARED=override
+OVERRIDE_ONLY=value
+"#;
+    
+    assert_eq!(actual, expected);
 }
 
 #[test]
