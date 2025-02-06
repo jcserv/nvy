@@ -1,4 +1,4 @@
-use assert_cmd::Command as AssertCommand;
+use assert_cmd::{assert, Command as AssertCommand};
 use predicates::prelude::*;
 use std::fs::{self, File};
 use std::io::Write;
@@ -566,4 +566,256 @@ profiles:
     let actual = String::from_utf8(assert.get_output().stdout.clone()).unwrap();
     let expected = "target: .env\n";
     assert_eq!(actual, expected);
+}
+
+#[test]
+fn test_profiles() {
+    let env = TestEnv::new();
+
+    env.create_config(r#"target: sh
+profiles:
+  default:
+    - path: .env"#).unwrap();
+    
+    AssertCommand::cargo_bin("nvy").unwrap()
+        .arg("profiles")
+        .current_dir(&env.temp_dir)
+        .assert()
+        .success();
+
+    let contents = String::from_utf8(env.get_config_contents().into()).unwrap();
+    let expected_config = r#"target: sh
+profiles:
+  default:
+    - path: .env"#;
+    assert_eq!(contents, expected_config);
+}
+
+#[test]
+fn test_profiles_set_new_profile() {
+    let env = TestEnv::new();
+    
+    env.create_config(r#"target: sh
+profiles:
+  default:
+    - path: .env"#).unwrap();
+    
+    // Create the env files
+    env.create_env_file(".env", "APP_ENV=default").unwrap();
+    env.create_env_file(".env.test", "APP_ENV=test").unwrap();
+
+    AssertCommand::cargo_bin("nvy").unwrap()
+        .arg("profiles")
+        .arg("set")
+        .arg("test")
+        .arg(".env.test")
+        .current_dir(&env.temp_dir)
+        .assert()
+        .success();
+    
+    let contents = env.get_config_contents();
+    assert!(contents.contains("test:"));
+    assert!(contents.contains(".env.test"));
+    assert!(contents.contains("default:"));
+}
+
+#[test]
+fn test_profiles_set_update_existing() {
+    let env = TestEnv::new();
+    
+    env.create_config(r#"target: sh
+profiles:
+  default:
+    - path: .env
+  test:
+    - path: .env.test"#).unwrap();
+    
+    env.create_env_file(".env", "APP_ENV=default").unwrap();
+    env.create_env_file(".env.test", "APP_ENV=test").unwrap();
+    env.create_env_file(".env.new", "APP_ENV=new").unwrap();
+
+    AssertCommand::cargo_bin("nvy").unwrap()
+        .arg("profiles")
+        .arg("set")
+        .arg("test")
+        .arg(".env.new")
+        .current_dir(&env.temp_dir)
+        .assert()
+        .success();
+    
+    let contents = env.get_config_contents();
+    assert!(contents.contains("test:"));
+    assert!(contents.contains(".env.new"));
+    assert!(!contents.contains(".env.test"));
+}
+
+#[test]
+fn test_profiles_set_fails_without_init() {
+    let env = TestEnv::new();
+    
+    env.create_env_file(".env.test", "APP_ENV=test").unwrap();
+
+    AssertCommand::cargo_bin("nvy").unwrap()
+        .arg("profiles")
+        .arg("set")
+        .arg("test")
+        .arg(".env.test")
+        .current_dir(&env.temp_dir)
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("nvy.yaml does not exist"));
+}
+
+#[test]
+fn test_profiles_set_fails_nonexistent_file() {
+    let env = TestEnv::new();
+    
+    env.create_config(r#"target: sh
+profiles:
+  default:
+    - path: .env"#).unwrap();
+    env.create_env_file(".env", "APP_ENV=default").unwrap();
+
+    AssertCommand::cargo_bin("nvy").unwrap()
+        .arg("profiles")
+        .arg("set")
+        .arg("test")
+        .arg(".env.nonexistent")
+        .current_dir(&env.temp_dir)
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("does not exist"));
+
+    // Config should remain unchanged
+    let contents = env.get_config_contents();
+    assert!(!contents.contains("test:"));
+}
+
+#[test]
+fn test_profiles_set_update_default() {
+    let env = TestEnv::new();
+    
+    env.create_config(r#"target: sh
+profiles:
+  default:
+    - path: .env"#).unwrap();
+    
+    env.create_env_file(".env", "APP_ENV=default").unwrap();
+    env.create_env_file(".env.new", "APP_ENV=new").unwrap();
+
+    AssertCommand::cargo_bin("nvy").unwrap()
+        .arg("profiles")
+        .arg("set")
+        .arg("default")
+        .arg(".env.new")
+        .current_dir(&env.temp_dir)
+        .assert()
+        .success();
+    
+    let actual = env.get_config_contents();
+    let expected = r#"target: sh
+profiles:
+  default:
+  - path: .env.new
+"#;
+    assert_eq!(actual, expected);
+}
+
+#[test]
+fn test_profiles_set_preserves_target() {
+    let env = TestEnv::new();
+    
+    env.create_config(r#"target: .env.custom
+profiles:
+  default:
+    - path: .env"#).unwrap();
+    
+    env.create_env_file(".env", "APP_ENV=default").unwrap();
+    env.create_env_file(".env.test", "APP_ENV=test").unwrap();
+    env.create_env_file(".env.custom", "").unwrap();
+
+    AssertCommand::cargo_bin("nvy").unwrap()
+        .arg("profiles")
+        .arg("set")
+        .arg("test")
+        .arg(".env.test")
+        .current_dir(&env.temp_dir)
+        .assert()
+        .success();
+
+    let actual = env.get_config_contents();
+    let expected = r#"target: .env.custom
+profiles:
+  default:
+  - path: .env
+  test:
+  - path: .env.test
+"#;
+    assert_eq!(actual, expected);
+}
+
+#[test]
+fn test_profiles_set_preserves_other_profiles() {
+    let env = TestEnv::new();
+    
+    env.create_config(r#"target: sh
+profiles:
+  default:
+    - path: .env
+  prod:
+    - path: .env.prod
+  staging:
+    - path: .env.staging"#).unwrap();
+    
+    env.create_env_file(".env", "APP_ENV=default").unwrap();
+    env.create_env_file(".env.prod", "APP_ENV=prod").unwrap();
+    env.create_env_file(".env.staging", "APP_ENV=staging").unwrap();
+    env.create_env_file(".env.test", "APP_ENV=test").unwrap();
+
+    AssertCommand::cargo_bin("nvy").unwrap()
+        .arg("profiles")
+        .arg("set")
+        .arg("test")
+        .arg(".env.test")
+        .current_dir(&env.temp_dir)
+        .assert()
+        .success();
+
+    let contents = env.get_config_contents();
+    assert!(contents.contains("default:"));
+    assert!(contents.contains("prod:"));
+    assert!(contents.contains("staging:"));
+    assert!(contents.contains("test:"));
+    assert!(contents.contains(".env.test"));
+}
+
+#[test]
+fn test_profiles_remove_happy_path() {
+    let env = TestEnv::new();
+    
+    env.create_config(r#"target: sh
+profiles:
+  default:
+    - path: .env
+  test:
+    - path: .env.test
+  prod:
+    - path: .env.prod"#).unwrap();
+
+    env.create_env_file(".env", "APP_ENV=default").unwrap();
+    env.create_env_file(".env.test", "APP_ENV=test").unwrap();
+    env.create_env_file(".env.prod", "APP_ENV=prod").unwrap();
+
+    AssertCommand::cargo_bin("nvy").unwrap()
+        .arg("profiles")
+        .arg("remove")
+        .arg("test")
+        .current_dir(&env.temp_dir)
+        .assert()
+        .success();
+    
+    let contents = env.get_config_contents();
+    assert!(!contents.contains("test:"));
+    assert!(contents.contains("default:"));
+    assert!(contents.contains("prod:"));
 }

@@ -84,6 +84,12 @@ pub struct Profile {
     pub path: String,
 }
 
+impl fmt::Display for Profile {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "- {}", self.path)
+    }
+}
+
 fn ordered_map<S>(value: &BTreeMap<String, Vec<Profile>>, serializer: S) -> Result<S::Ok, S::Error>
 where
     S: serde::Serializer,
