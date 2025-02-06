@@ -449,3 +449,33 @@ profiles:
     assert!(!contents.contains("example"));
     assert!(!contents.contains(".env.example"));
 }
+
+#[test]
+fn test_config() {
+    let env = TestEnv::new();
+
+    env.create_config(r#"target: sh
+profiles:
+  default:
+    - path: .env"#).unwrap();
+    
+    env.create_env_file(".env", "APP_ENV=default").unwrap();
+    env.create_env_file(".env.prod", "APP_ENV=prod").unwrap();
+    env.create_env_file(".env.example", "APP_ENV=example\nDB_URL=example").unwrap();
+
+    AssertCommand::cargo_bin("nvy").unwrap()
+        .arg("config")
+        .current_dir(&env.temp_dir)
+        .assert()
+        .success();
+
+    let contents = String::from_utf8(env.get_config_contents().into()).unwrap();
+    let expected_config = r#"target: sh
+profiles:
+  default:
+    - path: .env"#;
+    assert_eq!(contents, expected_config);
+    
+    assert!(!contents.contains("example"));
+    assert!(!contents.contains(".env.example"));
+}
