@@ -1,4 +1,4 @@
-use assert_cmd::{assert, Command as AssertCommand};
+use assert_cmd::Command as AssertCommand;
 use predicates::prelude::*;
 use std::fs::{self, File};
 use std::io::Write;
