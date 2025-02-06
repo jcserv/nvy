@@ -1,5 +1,5 @@
 use anyhow::{anyhow, Result};
-use std::{collections::{HashMap, HashSet}, fs};
+use std::{collections::{BTreeMap, HashSet}, fs};
 
 use crate::{config::{does_config_exist, get_profile_path, is_target_shell, load_config, Config, CONFIG_FILE_NAME}, success};
 
@@ -33,8 +33,8 @@ impl EnvVar {
 }
 
 struct ExportResult {
-    unset_vars: HashMap<String, EnvVar>,
-    new_vars: HashMap<String, EnvVar>,
+    unset_vars: BTreeMap<String, EnvVar>,
+    new_vars: BTreeMap<String, EnvVar>,
 }
 
 pub fn run_use(profiles: &Vec<String>) -> Result<()> {
@@ -46,8 +46,8 @@ pub fn run_use(profiles: &Vec<String>) -> Result<()> {
     }
 
     let mut result = ExportResult {
-        unset_vars: HashMap::new(),
-        new_vars: HashMap::new(),
+        unset_vars: BTreeMap::new(),
+        new_vars: BTreeMap::new(),
     };
 
     let config = load_config()?;
