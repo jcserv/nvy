@@ -104,7 +104,7 @@ fn init_config(target: &str, env_files: Vec<PathBuf>) -> Result<()> {
     let res = save_config(&config);
     match res {
         Ok(()) => {
-            success!("Initialized nvy.yaml in file mode, pointing to {}; run `nvy target <file>` to change the target.", DEFAULT_TARGET);
+            success!("Initialized nvy.yaml in file mode, pointing to {}; run `nvy target set <file>` to change the target.", DEFAULT_TARGET);
             Ok(())
         },
         Err(e) => Err(anyhow::anyhow!(e)),
