@@ -17,13 +17,16 @@ struct Cli {
 #[derive(Subcommand)]
 enum Commands {
     /// Initialize nv configuration in the current directory
+    #[clap(alias = "i")]
     Init,
     /// View or modify the target destination for environment variables
+    #[clap(alias = "t")]
     Target {
         #[command(subcommand)]
         command: Option<TargetCommands>,
     },
     /// Output the specified profile(s) to the target destination
+    #[clap(alias = "u")]
     Use {
         /// The profiles to use. If overlapping environment variables are defined, the last one wins.
         #[arg(num_args = 1..)] 
@@ -31,6 +34,7 @@ enum Commands {
         profiles: Vec<String>,
     },
     /// View the nvy configuration
+    #[clap(alias = "c")]
     Config,
 }
 
