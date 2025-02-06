@@ -4,7 +4,7 @@ use clap::{Parser, Subcommand};
 use nvy::config::run_config;
 use nvy::nvy_config::TARGET_SHELL;
 use nvy::init::run_init;
-use nvy::export::run_export;
+use nvy::target::{run_target, run_target_set};
 use nvy::r#use::run_use;
 
 #[derive(Parser)]
@@ -18,10 +18,10 @@ struct Cli {
 enum Commands {
     /// Initialize nv configuration in the current directory
     Init,
-    /// Set the target destination for environment variables
-    Export {
-        #[arg(default_value = TARGET_SHELL)]
-        target: String,
+    /// View or modify the target destination for environment variables
+    Target {
+        #[command(subcommand)]
+        command: Option<TargetCommands>,
     },
     /// Output the specified profile(s) to the target destination
     Use {
@@ -30,8 +30,17 @@ enum Commands {
         #[arg(default_values_t = vec!["default".to_string()])]
         profiles: Vec<String>,
     },
-    /// View and modify the nvy configuration
+    /// View the nvy configuration
     Config,
+}
+
+#[derive(Subcommand)]
+enum TargetCommands {
+    /// Set the target destination for environment variables
+    Set {
+        #[arg(default_value = TARGET_SHELL)]
+        file: String,
+    },
 }
 
 fn main() -> Result<()> {
@@ -41,8 +50,15 @@ fn main() -> Result<()> {
         Commands::Init => {
             run_init()?;
         },
-        Commands::Export { target } => {    
-            run_export(target)?;
+        Commands::Target { command } => {
+            match command {
+                Some(TargetCommands::Set { file }) => {
+                    run_target_set(file)?;
+                },
+                None => {
+                    run_target()?;
+                }
+            }
         },
         Commands::Use { profiles } => {
             run_use(profiles)?;
