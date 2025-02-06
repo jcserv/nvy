@@ -1,6 +1,6 @@
 use anyhow::{anyhow, Result};
 
-use crate::{config::{does_config_exist, load_config, save_config,CONFIG_FILE_NAME}, success};
+use crate::{nvy_config::{does_config_exist, load_config, save_config,CONFIG_FILE_NAME}, success};
 
 pub fn run_export(target: &String) -> Result<()> {
     if !does_config_exist() {

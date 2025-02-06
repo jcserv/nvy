@@ -4,7 +4,7 @@ use std::collections::BTreeMap;
 use std::io::{self};
 use std::path::PathBuf;
 
-use crate::config::{does_config_exist, is_target_shell, load_config, save_config, Config, Profile, DEFAULT_TARGET};
+use crate::nvy_config::{does_config_exist, is_target_shell, load_config, save_config, Config, Profile, DEFAULT_TARGET};
 use crate::log::{message, wrap_yellow};
 use crate::{success, warn};
 
@@ -114,7 +114,7 @@ fn init_config(target: &str, env_files: Vec<PathBuf>) -> Result<()> {
 #[cfg(test)]
 mod tests {
     use std::fs;
-    use crate::config::TARGET_SHELL;
+    use crate::nvy_config::TARGET_SHELL;
 
     use super::*;
 

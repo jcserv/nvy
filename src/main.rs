@@ -1,7 +1,8 @@
 use anyhow::Result;
 use clap::{Parser, Subcommand};
 
-use nvy::config::TARGET_SHELL;
+use nvy::config::run_config;
+use nvy::nvy_config::TARGET_SHELL;
 use nvy::init::run_init;
 use nvy::export::run_export;
 use nvy::r#use::run_use;
@@ -28,7 +29,9 @@ enum Commands {
         #[arg(num_args = 1..)] 
         #[arg(default_values_t = vec!["default".to_string()])]
         profiles: Vec<String>,
-    }
+    },
+    /// View and modify the nvy configuration
+    Config,
 }
 
 fn main() -> Result<()> {
@@ -44,6 +47,9 @@ fn main() -> Result<()> {
         Commands::Use { profiles } => {
             run_use(profiles)?;
         },
+        Commands::Config => {
+            run_config()?;
+        }
     }
 
     Ok(())

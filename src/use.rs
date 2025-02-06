@@ -1,7 +1,7 @@
 use anyhow::{anyhow, Result};
 use std::{collections::{BTreeMap, HashSet}, fs};
 
-use crate::{config::{does_config_exist, get_profile_path, is_target_shell, load_config, Config, CONFIG_FILE_NAME}, success};
+use crate::{nvy_config::{does_config_exist, get_profile_path, is_target_shell, load_config, Config, CONFIG_FILE_NAME}, success};
 
 const PROFILE_ENV_VAR: &str = "NV_CURRENT_PROFILE";
 
