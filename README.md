@@ -25,7 +25,7 @@ nvy (pronounced "ehn-vee", like the word "envy") is a simple command line tool f
      -  `eval "$(nvy use <profile>)"` - to switch between profiles
      - You can add an alias to your shell config to make this easier: `alias nv='eval "$(nvy use $1)"'` 
    - file mode:
-     - `nvy export <target-file>` to set the target file to write to
+     - `nvy target <target-file>` to set the target file to write to
      - `nvy use <profile>` to switch between profiles
 
 note: you can also use `nvy use <profile1> <profile2> ...` to use multiple profiles
