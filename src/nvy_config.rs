@@ -15,6 +15,9 @@ pub const CONFIG_FILE_NAME: &str = "nvy.yaml";
 pub struct Config {
     pub target: String,
 
+    #[serde(default)]
+    pub current_profiles: Vec<String>,
+
     #[serde(serialize_with = "ordered_map")]
     pub profiles: BTreeMap<String, Vec<Profile>>,
 }
@@ -68,6 +71,11 @@ pub fn get_profile_path(config: &Config, profile: &String) -> Result<String, any
 impl fmt::Display for Config {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         writeln!(f, "target: {}", self.target)?;
+        let mut curr_profiles_str = self.current_profiles.join(", ");
+        if curr_profiles_str.is_empty() {
+            curr_profiles_str = "none".to_string();
+        }
+        writeln!(f, "current: {}", curr_profiles_str)?;
         writeln!(f, "profiles:")?;
         
         for (name, profiles) in &self.profiles {

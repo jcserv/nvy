@@ -1,9 +1,7 @@
 use anyhow::{anyhow, Result};
 use std::{collections::{BTreeMap, HashSet}, fs};
 
-use crate::{nvy_config::{does_config_exist, get_profile_path, is_target_shell, load_config, Config, CONFIG_FILE_NAME}, success};
-
-const PROFILE_ENV_VAR: &str = "NV_CURRENT_PROFILE";
+use crate::{nvy_config::{does_config_exist, get_profile_path, is_target_shell, load_config, save_config, Config, CONFIG_FILE_NAME}, success};
 
 #[derive(Debug)]
 struct EnvVar {
@@ -53,7 +51,7 @@ pub fn run_use(profiles: &Vec<String>) -> Result<()> {
         profile_order: Vec::new(),
     };
 
-    let config = load_config()?;
+    let mut config = load_config()?;
 
     for profile in profiles {
         let profile_str = profile.to_string();
@@ -63,6 +61,9 @@ pub fn run_use(profiles: &Vec<String>) -> Result<()> {
         result.unset_vars.extend(profile_vars.unset_vars);
         result.new_vars.extend(profile_vars.new_vars);
     }
+
+    config.current_profiles = profiles.clone();
+    save_config(&config)?;
 
     if is_target_shell(&config) {
         for (_, var) in result.unset_vars {
@@ -88,12 +89,6 @@ pub fn run_use(profiles: &Vec<String>) -> Result<()> {
                 }
             }
         }
-        
-        println!(
-            "export {}={}",
-            PROFILE_ENV_VAR,
-            escape_shell_value(&profiles.join(","))
-        );
     } else {
         let mut content = String::new();
         
@@ -180,18 +175,13 @@ fn does_file_exist(path: &str) -> bool {
 fn get_current_profile_vars() -> Result<HashSet<String>> {
     let mut vars = HashSet::new();
     
-    let current_profiles = match std::env::var(PROFILE_ENV_VAR) {
-        Ok(profiles) => profiles,
-        Err(_) => return Ok(vars),
-    };
-    
     let config = match load_config() {
         Ok(cfg) => cfg,
         Err(_) => return Ok(vars),
     };
-    
-    for profile in current_profiles.split(',') {
-        let path = match get_profile_path(&config, &profile.to_string()) {
+
+    for profile in &config.current_profiles {
+        let path = match get_profile_path(&config, profile) {
             Ok(p) => p,
             Err(_) => continue,
         };

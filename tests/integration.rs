@@ -54,6 +54,7 @@ fn test_init_creates_config_in_empty_directory() {
     
     let contents = env.get_config_contents();
     let expected_config = r#"target: .env.nvy
+current_profiles: []
 profiles:
   default:
   - path: .env
@@ -70,6 +71,7 @@ fn test_init_prompts_for_reinit_accepts() {
     let env = TestEnv::new();
     
     env.create_config(r#"target: .env.nvy
+current_profiles: []
 profiles:
   default:
     - path: .env"#).unwrap();
@@ -86,6 +88,7 @@ profiles:
 
     let contents = env.get_config_contents();
     let expected_config = r#"target: .env.nvy
+current_profiles: []
 profiles:
   default:
   - path: .env
@@ -120,6 +123,7 @@ fn test_init_preserves_custom_target() {
     
     // Create initial config with custom target
     env.create_config(r#"target: .env.local
+current_profiles: []
 profiles:
   default:
     - path: .env"#).unwrap();
@@ -137,6 +141,7 @@ profiles:
 
     let contents = env.get_config_contents();
     let expected_config = r#"target: .env.local
+current_profiles: []
 profiles:
   default:
   - path: .env
@@ -187,6 +192,7 @@ fn test_init_ignores_example_env() {
 
     let contents = env.get_config_contents();
     let expected_config = r#"target: .env.nvy
+current_profiles: []
 profiles:
   default:
   - path: .env
@@ -200,13 +206,14 @@ profiles:
 }
 
 #[test]
-fn test_use_happy_path() {
+fn test_use_happy_path_shell() {
     let env = TestEnv::new();
     
     env.create_env_file(".env", "APP_ENV=default\nAPI_KEY=123").unwrap();
     env.create_env_file(".env.prod", "APP_ENV=production\nAPI_KEY=456").unwrap();
     
     env.create_config(r#"target: sh
+current_profiles: []
 profiles:
   default:
     - path: .env
@@ -223,7 +230,39 @@ profiles:
     let output = String::from_utf8(assert.get_output().stdout.clone()).unwrap();
     assert!(output.contains("export APP_ENV='production'"));
     assert!(output.contains("export API_KEY='456'"));
-    assert!(output.contains("export NV_CURRENT_PROFILE='prod'"));
+}
+
+#[test]
+fn test_use_happy_path_target() {
+    let env = TestEnv::new();
+    
+    env.create_env_file(".env", "APP_ENV=default\nAPI_KEY=123").unwrap();
+    env.create_env_file(".env.prod", "APP_ENV=production\nAPI_KEY=456").unwrap();
+    env.create_env_file(".env.target", "").unwrap();
+    
+    env.create_config(r#"target: .env.target
+current_profiles: []
+profiles:
+  default:
+    - path: .env
+  prod:
+    - path: .env.prod"#).unwrap();
+
+    AssertCommand::cargo_bin("nvy").unwrap()
+        .arg("use")
+        .arg("prod")
+        .current_dir(&env.temp_dir)
+        .assert()
+        .success();
+    
+    let target_contents = fs::read_to_string(env.temp_dir.path().join(".env.target")).unwrap();
+    assert!(target_contents.contains("APP_ENV=production"));
+    assert!(target_contents.contains("API_KEY=456"));
+    
+    let config_contents = fs::read_to_string(env.temp_dir.path().join("nvy.yaml")).unwrap();
+    assert!(config_contents.contains("current_profiles:"));
+    assert!(config_contents.contains("- prod"));
+    assert!(!config_contents.contains("- default"));
 }
 
 #[test]
@@ -234,13 +273,13 @@ fn test_use_unsets_previous_profile() {
     env.create_env_file(".env.prod", "APP_ENV=production").unwrap();
     
     env.create_config(r#"target: sh
+current_profiles: ["default"]
 profiles:
   default:
     - path: .env
   prod:
     - path: .env.prod"#).unwrap();
 
-    std::env::set_var("NV_CURRENT_PROFILE", "default");
     std::env::set_var("APP_ENV", "default");
     std::env::set_var("API_KEY", "123");
 
@@ -312,6 +351,7 @@ fn test_use_default_when_no_args() {
     
     env.create_env_file(".env", "DEFAULT=1").unwrap();
     env.create_config(r#"target: sh
+current_profiles: []
 profiles:
   default:
     - path: .env"#).unwrap();
@@ -324,7 +364,6 @@ profiles:
 
     let output = String::from_utf8(assert.get_output().stdout.clone()).unwrap();
     assert!(output.contains("export DEFAULT='1'"));
-    assert!(output.contains("export NV_CURRENT_PROFILE='default'"));
 }
 
 #[test]
@@ -335,6 +374,7 @@ fn test_use_multiple_profiles() {
     env.create_env_file(".env.override", "SHARED=override\nOVERRIDE_ONLY=value").unwrap();
     
     env.create_config(r#"target: sh
+current_profiles: []
 profiles:
   base:
     - path: .env.base
@@ -358,7 +398,6 @@ export BASE_ONLY='value'
 export SHARED='override'
 export OVERRIDE_ONLY='value'
 
-export NV_CURRENT_PROFILE='base,override'
 "#;
     
     assert_eq!(actual, expected);
@@ -435,6 +474,7 @@ fn test_use_with_empty_profile() {
     env.create_env_file(".env.empty", "").unwrap();
     
     env.create_config(r#"target: sh
+current_profiles: []
 profiles:
   empty:
     - path: .env.empty"#).unwrap();
@@ -447,7 +487,7 @@ profiles:
         .success();
     
     let output = String::from_utf8(assert.get_output().stdout.clone()).unwrap();
-    assert_eq!(output.trim(), "export NV_CURRENT_PROFILE='empty'");
+    assert_eq!(output.trim(), "");
 }
 
 #[test]
@@ -696,6 +736,7 @@ fn test_profiles_set_update_default() {
     let env = TestEnv::new();
     
     env.create_config(r#"target: sh
+current_profiles: []
 profiles:
   default:
     - path: .env"#).unwrap();
@@ -714,6 +755,7 @@ profiles:
     
     let actual = env.get_config_contents();
     let expected = r#"target: sh
+current_profiles: []
 profiles:
   default:
   - path: .env.new
@@ -726,6 +768,7 @@ fn test_profiles_set_preserves_target() {
     let env = TestEnv::new();
     
     env.create_config(r#"target: .env.custom
+current_profiles: []
 profiles:
   default:
     - path: .env"#).unwrap();
@@ -745,6 +788,7 @@ profiles:
 
     let actual = env.get_config_contents();
     let expected = r#"target: .env.custom
+current_profiles: []
 profiles:
   default:
   - path: .env
