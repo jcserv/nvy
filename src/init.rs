@@ -100,7 +100,7 @@ fn init_config(target: &str, env_files: Vec<PathBuf>) -> Result<()> {
         }
     }
 
-    let config = Config { target: target.to_string(), profiles };
+    let config = Config { target: target.to_string(), profiles, current_profiles: vec![] };
     let res = save_config(&config);
     match res {
         Ok(()) => {
