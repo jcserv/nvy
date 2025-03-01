@@ -11,7 +11,7 @@ nvy (pronounced "ehn-vee", like the word "envy") is a simple command line tool f
 ## installation 📦
 
 ### homebrew
-`brew tap jcserv/nvy`
+`brew tap jcserv/cask`
 
 `brew install nvy`
 
